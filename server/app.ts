@@ -25,12 +25,22 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
+app.options('*', cors());
 
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
 // Health Check and Routes
 const apiRouter = express.Router();
+
+apiRouter.get('/', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    system: 'CampusResolve Backend API',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+  });
+});
 
 apiRouter.get('/health', (req, res) => {
   res.status(200).json({

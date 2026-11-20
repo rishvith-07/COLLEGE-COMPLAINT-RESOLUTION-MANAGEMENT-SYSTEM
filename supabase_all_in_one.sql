@@ -284,7 +284,9 @@ VALUES
 ('usr-staff-it', 'Eng. Amit Sharma', 'staff.network@college.edu', '$2a$10$GJ8Pbi5gjChWp1pmxGyxvu6gL3rjZLuFmzpz0RjxGg.86cVDfAr0u', 'EMP-STF-092', 'STAFF', 'dept-it', NULL, NULL, '+1-555-1006', 'ACTIVE'),
 ('usr-student-1', 'Priya Sharma', 'student@college.edu', '$2a$10$GJ8Pbi5gjChWp1pmxGyxvu6gL3rjZLuFmzpz0RjxGg.86cVDfAr0u', 'STU-2023-CS-042', 'STUDENT', 'dept-cs', 'B.Tech Computer Science', '3rd Year', '+1-555-2001', 'ACTIVE'),
 ('usr-student-2', 'Rahul Verma', 'rahul.verma@college.edu', '$2a$10$GJ8Pbi5gjChWp1pmxGyxvu6gL3rjZLuFmzpz0RjxGg.86cVDfAr0u', 'STU-2024-ME-118', 'STUDENT', 'dept-estate', 'B.Tech Mechanical', '2nd Year', '+1-555-2002', 'ACTIVE'),
-('usr-student-3', 'Ananya Iyer', 'ananya.iyer@college.edu', '$2a$10$GJ8Pbi5gjChWp1pmxGyxvu6gL3rjZLuFmzpz0RjxGg.86cVDfAr0u', 'STU-2022-EE-015', 'STUDENT', 'dept-cs', 'B.Tech Electrical', '4th Year', '+1-555-2003', 'ACTIVE')
+('usr-student-3', 'Ananya Iyer', 'ananya.iyer@college.edu', '$2a$10$GJ8Pbi5gjChWp1pmxGyxvu6gL3rjZLuFmzpz0RjxGg.86cVDfAr0u', 'STU-2022-EE-015', 'STUDENT', 'dept-cs', 'B.Tech Electrical', '4th Year', '+1-555-2003', 'ACTIVE'),
+('usr-student-4', 'Rahul Sharma', 'rahul.sharma@college.edu', '$2a$10$GJ8Pbi5gjChWp1pmxGyxvu6gL3rjZLuFmzpz0RjxGg.86cVDfAr0u', 'STU-2024-CS-099', 'STUDENT', 'dept-cs', 'B.Tech Computer Science', '2nd Year', '+1-555-2004', 'ACTIVE'),
+('usr-hod-cs-alias', 'Prof. Ramesh Gupta', 'depthead.cs@college.edu', '$2a$10$GJ8Pbi5gjChWp1pmxGyxvu6gL3rjZLuFmzpz0RjxGg.86cVDfAr0u', 'EMP-FAC-014-ALIAS', 'DEPARTMENT_HEAD', 'dept-cs', NULL, NULL, '+1-555-1002', 'ACTIVE')
 ON CONFLICT (id) DO NOTHING;
 
 -- Link Department Heads

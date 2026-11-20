@@ -66,6 +66,55 @@ async function runTests() {
     const staffToken = staffLogin.data.data.token;
     console.log('✓ 5. Staff login authenticated: ', staffLogin.data.data.user.fullName);
 
+    // 5b. New Student Registration Flow Verification
+    const testRegEmail = `test.student.${Date.now()}@college.edu`;
+    const regRes = await apiCall('/auth/register', {
+      method: 'POST',
+      body: {
+        fullName: 'Test Fresh Student',
+        email: testRegEmail,
+        password: 'password123',
+        studentOrEmpId: `STU-TEST-${Date.now()}`,
+        departmentId: 'dept-cs',
+        course: 'B.Tech CS',
+        yearOfStudy: '1st Year',
+        role: 'STUDENT',
+      },
+    });
+    console.assert(regRes.status === 201, 'Registration failed');
+    console.assert(regRes.data.success === true, 'Registration success flag false');
+    console.log('✓ 5b. Fresh Student registration verified:', regRes.data.data.user.email);
+
+    // 5c. Login with the newly registered user
+    const newLoginRes = await apiCall('/auth/login', {
+      method: 'POST',
+      body: { email: testRegEmail, password: 'password123' },
+    });
+    console.assert(newLoginRes.status === 200, 'Login with new user failed');
+    console.assert(newLoginRes.data.data.user.email === testRegEmail, 'Email mismatch in new user login');
+    console.log('✓ 5c. Newly registered user successfully logged in with token:', newLoginRes.data.data.token.slice(0, 20) + '...');
+
+    // 5d. Duplicate Registration Conflict Rejection (409)
+    const dupRes = await apiCall('/auth/register', {
+      method: 'POST',
+      body: {
+        fullName: 'Duplicate Student',
+        email: testRegEmail,
+        password: 'password123',
+        studentOrEmpId: `STU-DUP-${Date.now()}`,
+      },
+    });
+    console.assert(dupRes.status === 409, 'Duplicate registration should return 409 Conflict');
+    console.log('✓ 5d. Duplicate email correctly rejected with 409 Conflict');
+
+    // 5e. Alias Student Login (rahul.sharma@college.edu)
+    const rahulLogin = await apiCall('/auth/login', {
+      method: 'POST',
+      body: { email: 'rahul.sharma@college.edu', password: 'password123' },
+    });
+    console.assert(rahulLogin.status === 200, 'Rahul Sharma login failed');
+    console.log('✓ 5e. Rahul Sharma alias login authenticated successfully');
+
     // 6. Submit a new complaint as student
     const newComplaint = await apiCall('/complaints', {
       method: 'POST',

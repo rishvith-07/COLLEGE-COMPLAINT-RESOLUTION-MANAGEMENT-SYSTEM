@@ -46,14 +46,13 @@ interface DatabaseStore {
 
 class DatabaseService {
   private pool: pg.Pool | null = null;
-  private isPostgresConnected = false;
   private store: DatabaseStore;
   private storeFilePath: string;
 
   constructor() {
     this.storeFilePath = path.resolve(process.cwd(), 'server/db/local_store.json');
     this.store = this.loadStore();
-    this.initPostgres();
+    this.initPool();
   }
 
   private loadStore(): DatabaseStore {
@@ -87,12 +86,13 @@ class DatabaseService {
         fs.mkdirSync(dir, { recursive: true });
       }
       fs.writeFileSync(this.storeFilePath, JSON.stringify(this.store, null, 2), 'utf8');
-    } catch (err) {
-      console.warn('Failed to persist store to file:', err);
+    } catch {
+      // In serverless environments (e.g. Vercel), local filesystem is read-only.
+      // Store state remains in-memory for the container lifecycle.
     }
   }
 
-  private async initPostgres() {
+  private initPool(): void {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
       console.log('ℹ️ DATABASE_URL not set. Running CampusResolve in built-in relational engine.');
@@ -105,15 +105,14 @@ class DatabaseService {
         ssl: {
           rejectUnauthorized: false,
         },
+        max: 10,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 5000,
       });
-
-      const client = await this.pool.connect();
-      console.log('✅ Connected to Supabase PostgreSQL database.');
-      client.release();
-      this.isPostgresConnected = true;
+      console.log('✅ PostgreSQL Pool initialized for Supabase database.');
     } catch (err) {
-      console.warn('⚠️ Supabase PostgreSQL connection attempt failed. Seamlessly falling back to integrated relational storage.', err);
-      this.isPostgresConnected = false;
+      console.warn('⚠️ Supabase PostgreSQL pool initialization failed, using local store:', err);
+      this.pool = null;
     }
   }
 
@@ -125,9 +124,9 @@ class DatabaseService {
   // ================= USERS =================
   async findUserByEmail(email: string): Promise<User | null> {
     const normalized = email.toLowerCase().trim();
-    if (this.isPostgresConnected && this.pool) {
+    if (this.pool) {
       try {
-        const res = await this.pool.query('SELECT * FROM users WHERE LOWER(email) = $1', [normalized]);
+        const res = await this.pool.query('SELECT * FROM users WHERE LOWER(TRIM(email)) = $1', [normalized]);
         if (res.rows.length) {
           const row = res.rows[0];
           return {
@@ -147,18 +146,18 @@ class DatabaseService {
             updatedAt: row.updated_at,
           };
         }
-        return null;
-      } catch (err) {
-        console.error('Postgres error in findUserByEmail:', err);
+        // If query ran and user truly not in database, also check seed/memory store fallback
+      } catch (err: any) {
+        console.error('Postgres error in findUserByEmail:', err.message || err);
       }
     }
 
-    const found = this.store.users.find((u) => u.email.toLowerCase() === normalized);
+    const found = this.store.users.find((u) => u.email.toLowerCase().trim() === normalized);
     return found ? { ...found } : null;
   }
 
   async findUserById(id: string): Promise<User | null> {
-    if (this.isPostgresConnected && this.pool) {
+    if (this.pool) {
       try {
         const res = await this.pool.query('SELECT * FROM users WHERE id = $1', [id]);
         if (res.rows.length) {
@@ -180,9 +179,8 @@ class DatabaseService {
             updatedAt: row.updated_at,
           };
         }
-        return null;
-      } catch (err) {
-        console.error('Postgres error in findUserById:', err);
+      } catch (err: any) {
+        console.error('Postgres error in findUserById:', err.message || err);
       }
     }
 
@@ -191,7 +189,7 @@ class DatabaseService {
   }
 
   async createUser(user: User): Promise<User> {
-    if (this.isPostgresConnected && this.pool) {
+    if (this.pool) {
       try {
         await this.pool.query(
           `INSERT INTO users (id, full_name, email, password_hash, student_or_emp_id, role, department_id, course, year_of_study, phone, avatar_url, status, created_at, updated_at)
@@ -213,8 +211,8 @@ class DatabaseService {
             user.updatedAt,
           ]
         );
-      } catch (err) {
-        console.error('Postgres error in createUser:', err);
+      } catch (err: any) {
+        console.error('Postgres error in createUser:', err.message || err);
       }
     }
 
@@ -233,7 +231,7 @@ class DatabaseService {
       updatedAt: new Date().toISOString(),
     };
 
-    if (this.isPostgresConnected && this.pool) {
+    if (this.pool) {
       try {
         await this.pool.query(
           `UPDATE users SET full_name = $1, email = $2, role = $3, department_id = $4, course = $5, year_of_study = $6, phone = $7, status = $8, updated_at = $9 WHERE id = $10`,
@@ -250,8 +248,8 @@ class DatabaseService {
             id,
           ]
         );
-      } catch (err) {
-        console.error('Postgres error in updateUser:', err);
+      } catch (err: any) {
+        console.error('Postgres error in updateUser:', err.message || err);
       }
     }
 

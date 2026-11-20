@@ -60,9 +60,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return { success: false, message: res.data.message || 'Login failed' };
     } catch (err: any) {
+      const serverMsg = err.response?.data?.message || err.response?.data?.error;
+      const statusMsg = err.response?.status ? `Error ${err.response.status}: ${err.response.statusText || 'Server Error'}` : null;
       return {
         success: false,
-        message: err.response?.data?.message || 'Login failed. Please check your credentials.',
+        message: serverMsg || statusMsg || err.message || 'Login failed. Please check your credentials.',
       };
     }
   };
@@ -90,7 +92,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = () => {
-    api.post('/auth/logout').catch(() => {});
+    api.post('/auth/logout').catch(() => { });
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
