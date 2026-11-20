@@ -7,6 +7,22 @@
 -- Enable UUID extension if not enabled
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Drop existing tables with CASCADE to ensure clean setup without old conflicting columns
+DROP TABLE IF EXISTS audit_logs CASCADE;
+DROP TABLE IF EXISTS notifications CASCADE;
+DROP TABLE IF EXISTS announcements CASCADE;
+DROP TABLE IF EXISTS feedback CASCADE;
+DROP TABLE IF EXISTS complaint_satisfaction CASCADE;
+DROP TABLE IF EXISTS complaint_escalations CASCADE;
+DROP TABLE IF EXISTS complaint_timeline CASCADE;
+DROP TABLE IF EXISTS complaint_comments CASCADE;
+DROP TABLE IF EXISTS complaint_attachments CASCADE;
+DROP TABLE IF EXISTS department_staff CASCADE;
+DROP TABLE IF EXISTS complaints CASCADE;
+DROP TABLE IF EXISTS complaint_categories CASCADE;
+DROP TABLE IF EXISTS departments CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+
 -- 1. DEPARTMENTS TABLE
 CREATE TABLE IF NOT EXISTS departments (
     id VARCHAR(50) PRIMARY KEY,
