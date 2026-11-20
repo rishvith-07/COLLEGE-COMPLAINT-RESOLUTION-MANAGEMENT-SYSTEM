@@ -80,9 +80,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return { success: false, message: res.data.message };
     } catch (err: any) {
+      const serverMsg = err.response?.data?.message || err.response?.data?.error;
+      const statusMsg = err.response?.status ? `Error ${err.response.status}: ${err.response.statusText || 'Server Error'}` : null;
       return {
         success: false,
-        message: err.response?.data?.message || 'Registration failed.',
+        message: serverMsg || statusMsg || err.message || 'Registration failed.',
       };
     }
   };
