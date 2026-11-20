@@ -25,22 +25,22 @@ app.use(
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
 );
-app.options('*', cors());
 
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
+// Vercel Serverless URL normalization
+app.use((req, res, next) => {
+  if (req.url.startsWith('/api/index')) {
+    req.url = req.url.replace('/api/index', '/api');
+  } else if (req.url.startsWith('/index')) {
+    req.url = req.url.replace('/index', '');
+  }
+  next();
+});
+
 // Health Check and Routes
 const apiRouter = express.Router();
-
-apiRouter.get('/', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    system: 'CampusResolve Backend API',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-  });
-});
 
 apiRouter.get('/health', (req, res) => {
   res.status(200).json({

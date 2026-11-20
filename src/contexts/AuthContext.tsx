@@ -60,11 +60,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return { success: false, message: res.data.message || 'Login failed' };
     } catch (err: any) {
-      const serverMsg = err.response?.data?.message || err.response?.data?.error;
-      const statusMsg = err.response?.status ? `Error ${err.response.status}: ${err.response.statusText || 'Server Error'}` : null;
       return {
         success: false,
-        message: serverMsg || statusMsg || err.message || 'Login failed. Please check your credentials.',
+        message: err.response?.data?.message || 'Login failed. Please check your credentials.',
       };
     }
   };
@@ -83,16 +81,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: false, message: res.data.message };
     } catch (err: any) {
       const serverMsg = err.response?.data?.message || err.response?.data?.error;
-      const statusMsg = err.response?.status ? `Error ${err.response.status}: ${err.response.statusText || 'Server Error'}` : null;
+      const statusText = err.response?.status ? ` (HTTP ${err.response.status})` : '';
       return {
         success: false,
-        message: serverMsg || statusMsg || err.message || 'Registration failed.',
+        message: serverMsg ? `${serverMsg}${statusText}` : (err.message || 'Registration failed.'),
       };
     }
   };
 
   const logout = () => {
-    api.post('/auth/logout').catch(() => { });
+    api.post('/auth/logout').catch(() => {});
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);

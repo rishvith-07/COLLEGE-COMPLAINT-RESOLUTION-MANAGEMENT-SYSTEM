@@ -20,6 +20,12 @@ export const register = async (req: AuthenticatedRequest, res: Response): Promis
       return;
     }
 
+    const existingStudentId = await db.findUserByStudentOrEmpId(studentOrEmpId.trim());
+    if (existingStudentId) {
+      res.status(409).json({ success: false, message: 'An account with this Student ID / Roll No already exists.' });
+      return;
+    }
+
     // Hash password with bcrypt
     const passwordHash = await bcrypt.hash(password, 10);
     const id = `usr-${Date.now()}-${Math.floor(Math.random() * 1000)}`;

@@ -1,34 +1,6 @@
 {
   "users": [
     {
-      "id": "usr-student-4",
-      "fullName": "Rahul Sharma",
-      "email": "rahul.sharma@college.edu",
-      "passwordHash": "$2a$10$GJ8Pbi5gjChWp1pmxGyxvu6gL3rjZLuFmzpz0RjxGg.86cVDfAr0u",
-      "studentOrEmpId": "STU-2024-CS-099",
-      "role": "STUDENT",
-      "departmentId": "dept-cs",
-      "course": "B.Tech Computer Science",
-      "yearOfStudy": "2nd Year",
-      "phone": "+1-555-2004",
-      "status": "ACTIVE",
-      "createdAt": "2026-08-21T13:42:20.270Z",
-      "updatedAt": "2026-08-21T13:42:20.270Z"
-    },
-    {
-      "id": "usr-hod-cs-alias",
-      "fullName": "Prof. Ramesh Gupta",
-      "email": "depthead.cs@college.edu",
-      "passwordHash": "$2a$10$GJ8Pbi5gjChWp1pmxGyxvu6gL3rjZLuFmzpz0RjxGg.86cVDfAr0u",
-      "studentOrEmpId": "EMP-FAC-014-ALIAS",
-      "role": "DEPARTMENT_HEAD",
-      "departmentId": "dept-cs",
-      "phone": "+1-555-1002",
-      "status": "ACTIVE",
-      "createdAt": "2026-08-31T13:42:20.270Z",
-      "updatedAt": "2026-08-31T13:42:20.270Z"
-    },
-    {
       "id": "usr-admin",
       "fullName": "Dr. Arthur Vance",
       "email": "admin@college.edu",
@@ -210,21 +182,6 @@
       "status": "ACTIVE",
       "createdAt": "2026-11-20T15:52:16.838Z",
       "updatedAt": "2026-11-20T15:52:16.838Z"
-    },
-    {
-      "id": "usr-1795189967975-585",
-      "fullName": "Test Fresh Student",
-      "email": "test.student.1795189967826@college.edu",
-      "passwordHash": "$2a$10$ZProUj4CHZBc5FNOfHuTb.OodEsSJKDe8yBdz8xOyXZGv6QiRKgbW",
-      "studentOrEmpId": "STU-TEST-1795189967826",
-      "role": "STUDENT",
-      "departmentId": "dept-cs",
-      "course": "B.Tech CS",
-      "yearOfStudy": "1st Year",
-      "phone": null,
-      "status": "ACTIVE",
-      "createdAt": "2026-11-20T15:52:47.975Z",
-      "updatedAt": "2026-11-20T15:52:47.976Z"
     }
   ],
   "departments": [
@@ -450,8 +407,8 @@
   ],
   "complaints": [
     {
-      "id": "cmp-1795189968295",
-      "referenceNumber": "CMP-2026-11463",
+      "id": "cmp-1795193313804",
+      "referenceNumber": "CMP-2026-49485",
       "studentId": "usr-student-1",
       "title": "Projector HDMI flickering in CS Seminar Hall 1",
       "description": "During morning guest lecture the video output cuts out every few seconds. Projector fan is also excessively loud.",
@@ -462,13 +419,13 @@
       "incidentDate": "2026-11-20",
       "status": "IN_PROGRESS",
       "assignedToUserId": "usr-staff-hostel",
-      "expectedResolutionDate": "2026-11-22T15:52:48.307Z",
+      "expectedResolutionDate": "2026-11-22T16:48:33.819Z",
       "resolvedAt": null,
       "closedAt": null,
       "isReopened": true,
       "reopenCount": 1,
-      "createdAt": "2026-11-20T15:52:48.295Z",
-      "updatedAt": "2026-11-20T15:52:48.406Z",
+      "createdAt": "2026-11-20T16:48:33.804Z",
+      "updatedAt": "2026-11-20T16:48:33.911Z",
       "student": {
         "id": "usr-student-1",
         "fullName": "Priya Sharma",
@@ -519,24 +476,24 @@
         "updatedAt": "2026-09-20T13:42:20.270Z"
       },
       "resolution": {
-        "id": "res-1795189968374",
-        "complaintId": "cmp-1795189968295",
+        "id": "res-1795193313881",
+        "complaintId": "cmp-1795193313804",
         "resolvedByUserId": "usr-staff-cs",
         "resolutionDescription": "Replaced faulty 15-meter ceiling HDMI run with high-grade shielded cable. Cleaned projector optical air filter.",
         "investigationSummary": "Old cable pin was bent inside wall faceplate causing intermittent signal loss.",
         "supportingDocumentUrl": null,
         "supportingDocumentName": null,
-        "resolvedAt": "2026-11-20T15:52:48.374Z",
-        "updatedAt": "2026-11-20T15:52:48.374Z"
+        "resolvedAt": "2026-11-20T16:48:33.881Z",
+        "updatedAt": "2026-11-20T16:48:33.881Z"
       },
       "feedback": {
-        "id": "fb-1795189968390",
-        "complaintId": "cmp-1795189968295",
+        "id": "fb-1795193313896",
+        "complaintId": "cmp-1795193313804",
         "studentId": "usr-student-1",
         "rating": 5,
         "comments": "Presentation went smoothly without any screen flicker! Excellent work.",
         "isSatisfied": true,
-        "createdAt": "2026-11-20T15:52:48.390Z"
+        "createdAt": "2026-11-20T16:48:33.896Z"
       }
     },
     {
@@ -1054,15 +1011,15 @@
       "updatedAt": "2026-11-20T15:52:17.143Z"
     },
     {
-      "id": "res-1795189968374",
-      "complaintId": "cmp-1795189968295",
+      "id": "res-1795193313881",
+      "complaintId": "cmp-1795193313804",
       "resolvedByUserId": "usr-staff-cs",
       "resolutionDescription": "Replaced faulty 15-meter ceiling HDMI run with high-grade shielded cable. Cleaned projector optical air filter.",
       "investigationSummary": "Old cable pin was bent inside wall faceplate causing intermittent signal loss.",
       "supportingDocumentUrl": null,
       "supportingDocumentName": null,
-      "resolvedAt": "2026-11-20T15:52:48.374Z",
-      "updatedAt": "2026-11-20T15:52:48.374Z"
+      "resolvedAt": "2026-11-20T16:48:33.881Z",
+      "updatedAt": "2026-11-20T16:48:33.881Z"
     }
   ],
   "feedback": [
@@ -1094,13 +1051,13 @@
       "createdAt": "2026-11-20T15:52:17.168Z"
     },
     {
-      "id": "fb-1795189968390",
-      "complaintId": "cmp-1795189968295",
+      "id": "fb-1795193313896",
+      "complaintId": "cmp-1795193313804",
       "studentId": "usr-student-1",
       "rating": 5,
       "comments": "Presentation went smoothly without any screen flicker! Excellent work.",
       "isSatisfied": true,
-      "createdAt": "2026-11-20T15:52:48.390Z"
+      "createdAt": "2026-11-20T16:48:33.896Z"
     }
   ],
   "history": [
@@ -1385,64 +1342,64 @@
       "createdAt": "2026-11-20T15:52:17.185Z"
     },
     {
-      "id": "hist-1795189968295",
-      "complaintId": "cmp-1795189968295",
+      "id": "hist-1795193313804",
+      "complaintId": "cmp-1795193313804",
       "action": "SUBMITTED",
       "previousStatus": null,
       "newStatus": "SUBMITTED",
       "performedByUserId": "usr-student-1",
       "notes": "Complaint submitted by student.",
-      "createdAt": "2026-11-20T15:52:48.295Z"
+      "createdAt": "2026-11-20T16:48:33.804Z"
     },
     {
-      "id": "hist-1795189968323",
-      "complaintId": "cmp-1795189968295",
+      "id": "hist-1795193313837",
+      "complaintId": "cmp-1795193313804",
       "action": "ASSIGNED",
       "previousStatus": "SUBMITTED",
       "newStatus": "ASSIGNED",
       "performedByUserId": "usr-admin",
       "notes": "Dispatched maintenance tech to test HDMI cable and clean projector exhaust filters.",
-      "createdAt": "2026-11-20T15:52:48.323Z"
+      "createdAt": "2026-11-20T16:48:33.837Z"
     },
     {
-      "id": "hist-1795189968336",
-      "complaintId": "cmp-1795189968295",
+      "id": "hist-1795193313851",
+      "complaintId": "cmp-1795193313804",
       "action": "STATUS_CHANGE",
       "previousStatus": "ASSIGNED",
       "newStatus": "IN_PROGRESS",
       "performedByUserId": "usr-staff-cs",
       "notes": "Technician on site with replacement 4K HDMI cable and test laptop.",
-      "createdAt": "2026-11-20T15:52:48.336Z"
+      "createdAt": "2026-11-20T16:48:33.851Z"
     },
     {
-      "id": "hist-1795189968376",
-      "complaintId": "cmp-1795189968295",
+      "id": "hist-1795193313883",
+      "complaintId": "cmp-1795193313804",
       "action": "RESOLVED",
       "previousStatus": "IN_PROGRESS",
       "newStatus": "RESOLVED",
       "performedByUserId": "usr-staff-cs",
       "notes": "Replaced faulty 15-meter ceiling HDMI run with high-grade shielded cable. Cleaned projector optical air filter.",
-      "createdAt": "2026-11-20T15:52:48.374Z"
+      "createdAt": "2026-11-20T16:48:33.881Z"
     },
     {
-      "id": "hist-1795189968392",
-      "complaintId": "cmp-1795189968295",
+      "id": "hist-1795193313898",
+      "complaintId": "cmp-1795193313804",
       "action": "CLOSED",
       "previousStatus": "RESOLVED",
       "newStatus": "CLOSED",
       "performedByUserId": "usr-student-1",
       "notes": "Student rated resolution 5/5 stars. Presentation went smoothly without any screen flicker! Excellent work.",
-      "createdAt": "2026-11-20T15:52:48.392Z"
+      "createdAt": "2026-11-20T16:48:33.898Z"
     },
     {
-      "id": "hist-1795189968407",
-      "complaintId": "cmp-1795189968295",
+      "id": "hist-1795193313912",
+      "complaintId": "cmp-1795193313804",
       "action": "REOPENED",
       "previousStatus": "CLOSED",
       "newStatus": "IN_PROGRESS",
       "performedByUserId": "usr-student-1",
       "notes": "Reopened by student: Screen started flickering again when switching to audio aux jack.",
-      "createdAt": "2026-11-20T15:52:48.407Z"
+      "createdAt": "2026-11-20T16:48:33.912Z"
     }
   ],
   "comments": [
@@ -1511,115 +1468,106 @@
       "createdAt": "2026-11-20T15:52:17.128Z"
     },
     {
-      "id": "comm-1795189968360",
-      "complaintId": "cmp-1795189968295",
+      "id": "comm-1795193313866",
+      "complaintId": "cmp-1795193313804",
       "authorId": "usr-student-1",
       "message": "We have a presentation at 2 PM today, thank you for quick attention!",
       "isInternal": false,
       "attachmentUrl": null,
       "attachmentName": null,
-      "createdAt": "2026-11-20T15:52:48.360Z"
+      "createdAt": "2026-11-20T16:48:33.866Z"
     },
     {
-      "id": "comm-1795189968366",
-      "complaintId": "cmp-1795189968295",
+      "id": "comm-1795193313872",
+      "complaintId": "cmp-1795193313804",
       "authorId": "usr-staff-cs",
       "message": "Technician replaced the cable and tested 1080p output. Operational now.",
       "isInternal": false,
       "attachmentUrl": null,
       "attachmentName": null,
-      "createdAt": "2026-11-20T15:52:48.366Z"
+      "createdAt": "2026-11-20T16:48:33.872Z"
     }
   ],
   "notifications": [
     {
-      "id": "notif-1795189968408",
+      "id": "notif-1795193313913",
       "userId": "usr-staff-hostel",
       "title": "Complaint Reopened",
-      "message": "Student reopened complaint CMP-2026-11463: Screen started flickering again when switching to audio aux jack.",
+      "message": "Student reopened complaint CMP-2026-49485: Screen started flickering again when switching to audio aux jack.",
       "type": "REOPENED",
-      "relatedComplaintId": "cmp-1795189968295",
+      "relatedComplaintId": "cmp-1795193313804",
       "isRead": false,
-      "createdAt": "2026-11-20T15:52:48.408Z"
+      "createdAt": "2026-11-20T16:48:33.913Z"
     },
     {
-      "id": "notif-1795189968377",
+      "id": "notif-1795193313884",
       "userId": "usr-student-1",
       "title": "Complaint Resolved",
-      "message": "Your complaint CMP-2026-11463 has been resolved. Please review and provide feedback.",
+      "message": "Your complaint CMP-2026-49485 has been resolved. Please review and provide feedback.",
       "type": "RESOLVED",
-      "relatedComplaintId": "cmp-1795189968295",
+      "relatedComplaintId": "cmp-1795193313804",
       "isRead": false,
-      "createdAt": "2026-11-20T15:52:48.377Z"
+      "createdAt": "2026-11-20T16:48:33.884Z"
     },
     {
-      "id": "notif-1795189968366",
+      "id": "notif-1795193313872",
       "userId": "usr-student-1",
       "title": "New Response on Your Complaint",
       "message": "Technician replaced the cable and tested 1080p output. Operational now.",
       "type": "COMMENT_ADDED",
-      "relatedComplaintId": "cmp-1795189968295",
+      "relatedComplaintId": "cmp-1795193313804",
       "isRead": false,
-      "createdAt": "2026-11-20T15:52:48.366Z"
+      "createdAt": "2026-11-20T16:48:33.872Z"
     },
     {
-      "id": "notif-1795189968360",
+      "id": "notif-1795193313866",
       "userId": "usr-staff-hostel",
       "title": "Student Responded to Complaint",
-      "message": "Update on CMP-2026-11463: We have a presentation at 2 PM today, thank you for quick attention!",
+      "message": "Update on CMP-2026-49485: We have a presentation at 2 PM today, thank you for quick attention!",
       "type": "COMMENT_ADDED",
-      "relatedComplaintId": "cmp-1795189968295",
+      "relatedComplaintId": "cmp-1795193313804",
       "isRead": false,
-      "createdAt": "2026-11-20T15:52:48.360Z"
+      "createdAt": "2026-11-20T16:48:33.866Z"
     },
     {
-      "id": "notif-1795189968337",
+      "id": "notif-1795193313853",
       "userId": "usr-student-1",
       "title": "Complaint Status: IN_PROGRESS",
-      "message": "Your complaint CMP-2026-11463 status changed from ASSIGNED to IN_PROGRESS.",
+      "message": "Your complaint CMP-2026-49485 status changed from ASSIGNED to IN_PROGRESS.",
       "type": "STATUS_UPDATE",
-      "relatedComplaintId": "cmp-1795189968295",
+      "relatedComplaintId": "cmp-1795193313804",
       "isRead": false,
-      "createdAt": "2026-11-20T15:52:48.337Z"
+      "createdAt": "2026-11-20T16:48:33.853Z"
     },
     {
-      "id": "notif-1795189968324",
+      "id": "notif-1795193313837",
       "userId": "usr-student-1",
       "title": "Complaint Assigned",
-      "message": "Your complaint CMP-2026-11463 has been assigned for investigation.",
+      "message": "Your complaint CMP-2026-49485 has been assigned for investigation.",
       "type": "ASSIGNMENT",
-      "relatedComplaintId": "cmp-1795189968295",
+      "relatedComplaintId": "cmp-1795193313804",
       "isRead": false,
-      "createdAt": "2026-11-20T15:52:48.324Z"
+      "createdAt": "2026-11-20T16:48:33.837Z"
     },
     {
-      "id": "notif-1795189968322",
+      "id": "notif-1795193313836",
       "userId": "usr-staff-hostel",
       "title": "Complaint Assigned",
-      "message": "You were assigned complaint CMP-2026-11463: Projector HDMI flickering in CS Seminar Hall 1",
+      "message": "You were assigned complaint CMP-2026-49485: Projector HDMI flickering in CS Seminar Hall 1",
       "type": "ASSIGNMENT",
-      "relatedComplaintId": "cmp-1795189968295",
+      "relatedComplaintId": "cmp-1795193313804",
       "isRead": false,
-      "createdAt": "2026-11-20T15:52:48.322Z"
+      "createdAt": "2026-11-20T16:48:33.836Z"
     },
     {
-      "id": "notif-1795189968298",
+      "id": "notif-1795193313806",
       "userId": "usr-admin",
       "title": "New Complaint Submitted",
-      "message": "CMP-2026-11463: Projector HDMI flickering in CS Seminar Hall 1",
+      "message": "CMP-2026-49485: Projector HDMI flickering in CS Seminar Hall 1",
       "type": "COMPLAINT_SUBMITTED",
-      "relatedComplaintId": "cmp-1795189968295",
+      "relatedComplaintId": "cmp-1795193313804",
       "isRead": false,
-      "createdAt": "2026-11-20T15:52:48.295Z"
-    },
-    {
-      "id": "notif-1795189967979",
-      "userId": "usr-1795189967975-585",
-      "title": "Welcome to CampusResolve",
-      "message": "Your student account has been created. You can now lodge, track, and manage grievances.",
-      "type": "ACCOUNT_CREATED",
-      "isRead": false,
-      "createdAt": "2026-11-20T15:52:47.979Z"
+      "createdAt": "2026-11-20T16:48:33.804Z"
     },
     {
       "id": "notif-1795189937186",
@@ -1930,31 +1878,31 @@
   ],
   "auditLogs": [
     {
-      "id": "audit-1795189968338",
+      "id": "audit-1795193313854",
       "userId": "usr-staff-cs",
       "action": "UPDATE_COMPLAINT_STATUS",
       "targetEntity": "COMPLAINT",
-      "targetId": "cmp-1795189968295",
+      "targetId": "cmp-1795193313804",
       "details": {
         "previousStatus": "ASSIGNED",
         "newStatus": "IN_PROGRESS",
         "notes": "Technician on site with replacement 4K HDMI cable and test laptop."
       },
       "ipAddress": "::1",
-      "createdAt": "2026-11-20T15:52:48.338Z"
+      "createdAt": "2026-11-20T16:48:33.854Z"
     },
     {
-      "id": "audit-1795189968300",
+      "id": "audit-1795193313807",
       "userId": "usr-student-1",
       "action": "CREATE_COMPLAINT",
       "targetEntity": "COMPLAINT",
-      "targetId": "cmp-1795189968295",
+      "targetId": "cmp-1795193313804",
       "details": {
-        "referenceNumber": "CMP-2026-11463",
+        "referenceNumber": "CMP-2026-49485",
         "title": "Projector HDMI flickering in CS Seminar Hall 1"
       },
       "ipAddress": "::1",
-      "createdAt": "2026-11-20T15:52:48.300Z"
+      "createdAt": "2026-11-20T16:48:33.808Z"
     },
     {
       "id": "audit-1795189937098",
