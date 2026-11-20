@@ -1,10 +1,247 @@
 -- ==========================================================
 -- COLLEGE COMPLAINT RESOLUTION SYSTEM (CAMPUSRESOLVE)
--- SEED DATA SCRIPT FOR SUPABASE POSTGRESQL
+-- COMPLETE SUPABASE POSTGRESQL SCRIPT (SCHEMA + SEED DATA)
 -- Default password for all seed accounts: password123
 -- ==========================================================
 
--- 1. DEPARTMENTS SEED
+-- Enable UUID extension if not enabled
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ==========================================================
+-- 1. CREATE ALL TABLES (IF NOT EXIST)
+-- ==========================================================
+
+-- 1.1 DEPARTMENTS TABLE
+CREATE TABLE IF NOT EXISTS departments (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(150) NOT NULL,
+    code VARCHAR(30) UNIQUE NOT NULL,
+    description TEXT,
+    head_user_id VARCHAR(50),
+    contact_email VARCHAR(150),
+    contact_phone VARCHAR(50),
+    office_location VARCHAR(150),
+    status VARCHAR(20) DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 1.2 USERS TABLE
+CREATE TABLE IF NOT EXISTS users (
+    id VARCHAR(50) PRIMARY KEY,
+    full_name VARCHAR(150) NOT NULL,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    student_or_emp_id VARCHAR(50) UNIQUE NOT NULL,
+    role VARCHAR(30) NOT NULL CHECK (role IN ('STUDENT', 'STAFF', 'FACULTY', 'DEPARTMENT_HEAD', 'ADMIN')),
+    department_id VARCHAR(50) REFERENCES departments(id) ON DELETE SET NULL,
+    course VARCHAR(100),
+    year_of_study VARCHAR(20),
+    phone VARCHAR(30),
+    avatar_url TEXT,
+    status VARCHAR(20) DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE', 'SUSPENDED')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add foreign key constraint for department head
+ALTER TABLE departments
+    DROP CONSTRAINT IF EXISTS fk_departments_head;
+ALTER TABLE departments
+    ADD CONSTRAINT fk_departments_head
+    FOREIGN KEY (head_user_id) REFERENCES users(id) ON DELETE SET NULL;
+
+-- 1.3 COMPLAINT CATEGORIES TABLE
+CREATE TABLE IF NOT EXISTS complaint_categories (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    default_department_id VARCHAR(50) REFERENCES departments(id) ON DELETE SET NULL,
+    default_priority VARCHAR(20) DEFAULT 'MEDIUM' CHECK (default_priority IN ('LOW', 'MEDIUM', 'HIGH', 'URGENT')),
+    status VARCHAR(20) DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 1.4 COMPLAINTS TABLE
+CREATE TABLE IF NOT EXISTS complaints (
+    id VARCHAR(50) PRIMARY KEY,
+    reference_number VARCHAR(50) UNIQUE NOT NULL,
+    student_id VARCHAR(50) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    category_id VARCHAR(50) NOT NULL REFERENCES complaint_categories(id) ON DELETE RESTRICT,
+    department_id VARCHAR(50) NOT NULL REFERENCES departments(id) ON DELETE RESTRICT,
+    location VARCHAR(150),
+    priority VARCHAR(20) NOT NULL DEFAULT 'MEDIUM' CHECK (priority IN ('LOW', 'MEDIUM', 'HIGH', 'URGENT')),
+    incident_date DATE,
+    status VARCHAR(30) NOT NULL DEFAULT 'SUBMITTED' CHECK (
+        status IN (
+            'SUBMITTED',
+            'UNDER_REVIEW',
+            'ASSIGNED',
+            'IN_PROGRESS',
+            'WAITING_FOR_STUDENT',
+            'ESCALATED',
+            'RESOLVED',
+            'CLOSED',
+            'REJECTED'
+        )
+    ),
+    assigned_to_user_id VARCHAR(50) REFERENCES users(id) ON DELETE SET NULL,
+    expected_resolution_date TIMESTAMP WITH TIME ZONE,
+    resolved_at TIMESTAMP WITH TIME ZONE,
+    closed_at TIMESTAMP WITH TIME ZONE,
+    is_reopened BOOLEAN DEFAULT FALSE,
+    reopen_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 1.5 COMPLAINT ASSIGNMENTS TABLE
+CREATE TABLE IF NOT EXISTS complaint_assignments (
+    id VARCHAR(50) PRIMARY KEY,
+    complaint_id VARCHAR(50) NOT NULL REFERENCES complaints(id) ON DELETE CASCADE,
+    department_id VARCHAR(50) NOT NULL REFERENCES departments(id) ON DELETE RESTRICT,
+    assigned_to_user_id VARCHAR(50) REFERENCES users(id) ON DELETE SET NULL,
+    assigned_by_user_id VARCHAR(50) NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    notes TEXT,
+    expected_resolution_date TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 1.6 COMPLAINT HISTORY (AUDIT LIFECYCLE) TABLE
+CREATE TABLE IF NOT EXISTS complaint_history (
+    id VARCHAR(50) PRIMARY KEY,
+    complaint_id VARCHAR(50) NOT NULL REFERENCES complaints(id) ON DELETE CASCADE,
+    action VARCHAR(100) NOT NULL,
+    previous_status VARCHAR(30),
+    new_status VARCHAR(30),
+    performed_by_user_id VARCHAR(50) NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    notes TEXT,
+    metadata JSONB DEFAULT '{}'::jsonb,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 1.7 COMPLAINT COMMENTS (COMMUNICATION THREAD) TABLE
+CREATE TABLE IF NOT EXISTS complaint_comments (
+    id VARCHAR(50) PRIMARY KEY,
+    complaint_id VARCHAR(50) NOT NULL REFERENCES complaints(id) ON DELETE CASCADE,
+    author_id VARCHAR(50) NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    message TEXT NOT NULL,
+    is_internal BOOLEAN DEFAULT FALSE,
+    attachment_url TEXT,
+    attachment_name VARCHAR(255),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 1.8 COMPLAINT ATTACHMENTS TABLE
+CREATE TABLE IF NOT EXISTS complaint_attachments (
+    id VARCHAR(50) PRIMARY KEY,
+    complaint_id VARCHAR(50) NOT NULL REFERENCES complaints(id) ON DELETE CASCADE,
+    uploaded_by_user_id VARCHAR(50) NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    file_name VARCHAR(255) NOT NULL,
+    file_type VARCHAR(100) NOT NULL,
+    file_size_bytes BIGINT NOT NULL,
+    file_url TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 1.9 COMPLAINT RESOLUTIONS TABLE
+CREATE TABLE IF NOT EXISTS complaint_resolutions (
+    id VARCHAR(50) PRIMARY KEY,
+    complaint_id VARCHAR(50) NOT NULL UNIQUE REFERENCES complaints(id) ON DELETE CASCADE,
+    resolved_by_user_id VARCHAR(50) NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
+    resolution_description TEXT NOT NULL,
+    investigation_summary TEXT,
+    supporting_document_url TEXT,
+    supporting_document_name VARCHAR(255),
+    resolved_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 1.10 COMPLAINT FEEDBACK TABLE
+CREATE TABLE IF NOT EXISTS complaint_feedback (
+    id VARCHAR(50) PRIMARY KEY,
+    complaint_id VARCHAR(50) NOT NULL UNIQUE REFERENCES complaints(id) ON DELETE CASCADE,
+    student_id VARCHAR(50) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comments TEXT,
+    is_satisfied BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 1.11 NOTIFICATIONS TABLE
+CREATE TABLE IF NOT EXISTS notifications (
+    id VARCHAR(50) PRIMARY KEY,
+    user_id VARCHAR(50) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(200) NOT NULL,
+    message TEXT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    related_complaint_id VARCHAR(50) REFERENCES complaints(id) ON DELETE CASCADE,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 1.12 USER SETTINGS & PREFERENCES TABLE
+CREATE TABLE IF NOT EXISTS user_settings (
+    id VARCHAR(50) PRIMARY KEY,
+    user_id VARCHAR(50) NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+    theme VARCHAR(20) DEFAULT 'system' CHECK (theme IN ('light', 'dark', 'system')),
+    email_notifications BOOLEAN DEFAULT TRUE,
+    in_app_notifications BOOLEAN DEFAULT TRUE,
+    default_dashboard_range VARCHAR(30) DEFAULT 'ALL',
+    preferences JSONB DEFAULT '{}'::jsonb,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 1.13 AUDIT LOGS TABLE
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id VARCHAR(50) PRIMARY KEY,
+    user_id VARCHAR(50) REFERENCES users(id) ON DELETE SET NULL,
+    action VARCHAR(100) NOT NULL,
+    target_entity VARCHAR(50) NOT NULL,
+    target_id VARCHAR(50),
+    details JSONB DEFAULT '{}'::jsonb,
+    ip_address VARCHAR(50),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 1.14 SYSTEM APP SETTINGS TABLE
+CREATE TABLE IF NOT EXISTS system_settings (
+    key VARCHAR(100) PRIMARY KEY,
+    value JSONB NOT NULL,
+    description TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==========================================================
+-- 2. CREATE INDEXES
+-- ==========================================================
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_department ON users(department_id);
+
+CREATE INDEX IF NOT EXISTS idx_complaints_student ON complaints(student_id);
+CREATE INDEX IF NOT EXISTS idx_complaints_status ON complaints(status);
+CREATE INDEX IF NOT EXISTS idx_complaints_department ON complaints(department_id);
+CREATE INDEX IF NOT EXISTS idx_complaints_category ON complaints(category_id);
+CREATE INDEX IF NOT EXISTS idx_complaints_assigned_to ON complaints(assigned_to_user_id);
+CREATE INDEX IF NOT EXISTS idx_complaints_ref ON complaints(reference_number);
+CREATE INDEX IF NOT EXISTS idx_complaints_created_at ON complaints(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_complaint_history_complaint ON complaint_history(complaint_id);
+CREATE INDEX IF NOT EXISTS idx_complaint_comments_complaint ON complaint_comments(complaint_id);
+CREATE INDEX IF NOT EXISTS idx_complaint_assignments_complaint ON complaint_assignments(complaint_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+
+-- ==========================================================
+-- 3. INSERT SEED DATA
+-- ==========================================================
+
+-- 3.1 DEPARTMENTS SEED
 INSERT INTO departments (id, name, code, description, contact_email, contact_phone, office_location, status)
 VALUES
 ('dept-cs', 'Computer Science & Engineering', 'CSE', 'Handles CS academic grievances, computer labs, and department facilities.', 'cs.dept@college.edu', '+1-555-0101', 'Academic Block A, 3rd Floor', 'ACTIVE'),
@@ -18,7 +255,7 @@ VALUES
 ('dept-affairs', 'Student Affairs & Grievance Redressal', 'AFFAIRS', 'High-level student welfare, anti-ragging redressal, student council, and code of conduct.', 'student.affairs@college.edu', '+1-555-0109', 'Student Center, Dean Office', 'ACTIVE')
 ON CONFLICT (id) DO NOTHING;
 
--- 2. USERS SEED (password is 'password123' for all)
+-- 3.2 USERS SEED (password is 'password123' for all)
 INSERT INTO users (id, full_name, email, password_hash, student_or_emp_id, role, department_id, course, year_of_study, phone, status)
 VALUES
 ('usr-admin', 'Dr. Arthur Vance', 'admin@college.edu', '$2a$10$GJ8Pbi5gjChWp1pmxGyxvu6gL3rjZLuFmzpz0RjxGg.86cVDfAr0u', 'EMP-ADM-001', 'ADMIN', 'dept-affairs', NULL, NULL, '+1-555-1001', 'ACTIVE'),
@@ -36,7 +273,7 @@ ON CONFLICT (id) DO NOTHING;
 UPDATE departments SET head_user_id = 'usr-hod-cs' WHERE id = 'dept-cs';
 UPDATE departments SET head_user_id = 'usr-hod-hostel' WHERE id = 'dept-hostel';
 
--- 3. COMPLAINT CATEGORIES SEED
+-- 3.3 COMPLAINT CATEGORIES SEED
 INSERT INTO complaint_categories (id, name, description, default_department_id, default_priority, status)
 VALUES
 ('cat-wifi', 'Wi-Fi & Internet Connectivity', 'Issues regarding campus or hostel Wi-Fi, DNS, authentication portal, or slow bandwidth.', 'dept-it', 'HIGH', 'ACTIVE'),
@@ -51,7 +288,7 @@ VALUES
 ('cat-sanitation', 'Campus Cleanliness & Water Supply', 'Washroom hygiene, drinking water cooler filters, trash disposal, or pest control.', 'dept-estate', 'MEDIUM', 'ACTIVE')
 ON CONFLICT (id) DO NOTHING;
 
--- 4. COMPLAINTS SEED
+-- 3.4 COMPLAINTS SEED
 INSERT INTO complaints (id, reference_number, student_id, title, description, category_id, department_id, location, priority, incident_date, status, assigned_to_user_id, expected_resolution_date, resolved_at, is_reopened, reopen_count, created_at, updated_at)
 VALUES
 (
@@ -176,7 +413,7 @@ VALUES
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 5. RESOLUTIONS SEED
+-- 3.5 RESOLUTIONS SEED
 INSERT INTO complaint_resolutions (id, complaint_id, resolved_by_user_id, resolution_description, investigation_summary, resolved_at)
 VALUES
 (
@@ -189,7 +426,7 @@ VALUES
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 6. FEEDBACK SEED
+-- 3.6 FEEDBACK SEED
 INSERT INTO complaint_feedback (id, complaint_id, student_id, rating, comments, is_satisfied, created_at)
 VALUES
 (
@@ -203,7 +440,7 @@ VALUES
 )
 ON CONFLICT (id) DO NOTHING;
 
--- 7. COMPLAINT HISTORY SEED
+-- 3.7 COMPLAINT HISTORY SEED
 INSERT INTO complaint_history (id, complaint_id, action, previous_status, new_status, performed_by_user_id, notes, created_at)
 VALUES
 ('hist-001', 'cmp-001', 'SUBMITTED', NULL, 'SUBMITTED', 'usr-student-1', 'Complaint logged by student.', '2026-11-16 09:30:00+00'),
@@ -226,7 +463,7 @@ VALUES
 ('hist-014', 'cmp-005', 'INFO_REQUESTED', 'SUBMITTED', 'WAITING_FOR_STUDENT', 'usr-admin', 'Requested student to upload scanned bus pass and specify exact boarding stop.', '2026-11-17 15:30:00+00')
 ON CONFLICT (id) DO NOTHING;
 
--- 8. COMPLAINT COMMENTS SEED
+-- 3.8 COMPLAINT COMMENTS SEED
 INSERT INTO complaint_comments (id, complaint_id, author_id, message, is_internal, created_at)
 VALUES
 ('comm-001', 'cmp-001', 'usr-staff-it', 'Hello Priya, we tested the port remotely and saw multiple packet drops. A field engineer is dispatched with a replacement Aruba switch module.', false, '2026-11-18 14:20:00+00'),
@@ -234,7 +471,7 @@ VALUES
 ('comm-003', 'cmp-005', 'usr-admin', 'Please reply with the exact stop where you board and whether this happens on the return evening trip as well.', false, '2026-11-17 15:30:00+00')
 ON CONFLICT (id) DO NOTHING;
 
--- 9. NOTIFICATIONS SEED
+-- 3.9 NOTIFICATIONS SEED
 INSERT INTO notifications (id, user_id, title, message, type, related_complaint_id, is_read, created_at)
 VALUES
 ('notif-001', 'usr-student-1', 'Status Updated: IN PROGRESS', 'Your complaint CMP-2026-00101 is now In Progress by IT & Campus Networking.', 'STATUS_UPDATE', 'cmp-001', false, '2026-11-18 14:15:00+00'),
