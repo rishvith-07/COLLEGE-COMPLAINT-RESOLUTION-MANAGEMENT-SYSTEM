@@ -1,5 +1,5 @@
-import app from './api/app';
-import { db } from './api/db/db';
+import app from './server/app';
+import { db } from './server/db/db';
 import http from 'http';
 
 async function runTests() {
