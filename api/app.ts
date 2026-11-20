@@ -29,8 +29,10 @@ app.use(
 app.use(express.json({ limit: '15mb' }));
 app.use(express.urlencoded({ extended: true, limit: '15mb' }));
 
-// Health Check
-app.get('/api/health', (req, res) => {
+// Health Check and Routes
+const apiRouter = express.Router();
+
+apiRouter.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
     system: 'CampusResolve Backend API',
@@ -39,16 +41,19 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Mount Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/complaints', complaintRoutes);
-app.use('/api/departments', departmentRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/settings', settingsRoutes);
+apiRouter.use('/auth', authRoutes);
+apiRouter.use('/complaints', complaintRoutes);
+apiRouter.use('/departments', departmentRoutes);
+apiRouter.use('/categories', categoryRoutes);
+apiRouter.use('/users', userRoutes);
+apiRouter.use('/dashboard', dashboardRoutes);
+apiRouter.use('/reports', reportRoutes);
+apiRouter.use('/notifications', notificationRoutes);
+apiRouter.use('/settings', settingsRoutes);
+
+// Support both /api prefix and direct paths on Vercel serverless runtime
+app.use('/api', apiRouter);
+app.use('/', apiRouter);
 
 // Error Handling Middleware
 app.use(errorHandler);
