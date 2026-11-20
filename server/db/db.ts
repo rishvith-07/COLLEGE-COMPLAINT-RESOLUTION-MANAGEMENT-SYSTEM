@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import pg from 'pg';
 import fs from 'fs';
 import path from 'path';
@@ -46,7 +47,6 @@ interface DatabaseStore {
 
 class DatabaseService {
   private pool: pg.Pool | null = null;
-  private isPostgresConnected = false;
   private store: DatabaseStore;
   private storeFilePath: string;
 
@@ -81,6 +81,9 @@ class DatabaseService {
   }
 
   private saveStore(): void {
+    if (process.env.DATABASE_URL || process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+      return;
+    }
     try {
       const dir = path.dirname(this.storeFilePath);
       if (!fs.existsSync(dir)) {
@@ -88,15 +91,15 @@ class DatabaseService {
       }
       fs.writeFileSync(this.storeFilePath, JSON.stringify(this.store, null, 2), 'utf8');
     } catch (err) {
-      console.warn('Failed to persist store to file:', err);
+      // Ignored in read-only serverless environments
     }
   }
 
-  private async initPostgres() {
+  private initPostgres(): pg.Pool | null {
+    if (this.pool) return this.pool;
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
-      console.log('ℹ️ DATABASE_URL not set. Running CampusResolve in built-in relational engine.');
-      return;
+      return null;
     }
 
     try {
@@ -105,16 +108,23 @@ class DatabaseService {
         ssl: {
           rejectUnauthorized: false,
         },
+        max: 10,
+        connectionTimeoutMillis: 5000,
+        idleTimeoutMillis: 30000,
       });
-
-      const client = await this.pool.connect();
-      console.log('✅ Connected to Supabase PostgreSQL database.');
-      client.release();
-      this.isPostgresConnected = true;
+      return this.pool;
     } catch (err) {
-      console.warn('⚠️ Supabase PostgreSQL connection attempt failed. Seamlessly falling back to integrated relational storage.', err);
-      this.isPostgresConnected = false;
+      console.warn('Supabase PostgreSQL pool creation failed:', err);
+      return null;
     }
+  }
+
+  public getPool(): pg.Pool | null {
+    if (!process.env.DATABASE_URL) return null;
+    if (!this.pool) {
+      this.initPostgres();
+    }
+    return this.pool;
   }
 
   public toSafeUser(user: User): SafeUser {
@@ -122,35 +132,35 @@ class DatabaseService {
     return safe;
   }
 
+  private mapUserRow(row: any): User {
+    return {
+      id: row.id,
+      fullName: row.full_name,
+      email: row.email,
+      passwordHash: row.password_hash,
+      studentOrEmpId: row.student_or_emp_id,
+      role: row.role,
+      departmentId: row.department_id,
+      course: row.course,
+      yearOfStudy: row.year_of_study,
+      phone: row.phone,
+      avatarUrl: row.avatar_url,
+      status: row.status,
+      createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+      updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString(),
+    };
+  }
+
   // ================= USERS =================
   async findUserByEmail(email: string): Promise<User | null> {
     const normalized = email.toLowerCase().trim();
-    if (this.isPostgresConnected && this.pool) {
-      try {
-        const res = await this.pool.query('SELECT * FROM users WHERE LOWER(email) = $1', [normalized]);
-        if (res.rows.length) {
-          const row = res.rows[0];
-          return {
-            id: row.id,
-            fullName: row.full_name,
-            email: row.email,
-            passwordHash: row.password_hash,
-            studentOrEmpId: row.student_or_emp_id,
-            role: row.role,
-            departmentId: row.department_id,
-            course: row.course,
-            yearOfStudy: row.year_of_study,
-            phone: row.phone,
-            avatarUrl: row.avatar_url,
-            status: row.status,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at,
-          };
-        }
-        return null;
-      } catch (err) {
-        console.error('Postgres error in findUserByEmail:', err);
+    const pool = this.getPool();
+    if (pool) {
+      const res = await pool.query('SELECT * FROM users WHERE LOWER(email) = LOWER($1)', [normalized]);
+      if (res.rows.length) {
+        return this.mapUserRow(res.rows[0]);
       }
+      return null;
     }
 
     const found = this.store.users.find((u) => u.email.toLowerCase() === normalized);
@@ -158,32 +168,13 @@ class DatabaseService {
   }
 
   async findUserById(id: string): Promise<User | null> {
-    if (this.isPostgresConnected && this.pool) {
-      try {
-        const res = await this.pool.query('SELECT * FROM users WHERE id = $1', [id]);
-        if (res.rows.length) {
-          const row = res.rows[0];
-          return {
-            id: row.id,
-            fullName: row.full_name,
-            email: row.email,
-            passwordHash: row.password_hash,
-            studentOrEmpId: row.student_or_emp_id,
-            role: row.role,
-            departmentId: row.department_id,
-            course: row.course,
-            yearOfStudy: row.year_of_study,
-            phone: row.phone,
-            avatarUrl: row.avatar_url,
-            status: row.status,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at,
-          };
-        }
-        return null;
-      } catch (err) {
-        console.error('Postgres error in findUserById:', err);
+    const pool = this.getPool();
+    if (pool) {
+      const res = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+      if (res.rows.length) {
+        return this.mapUserRow(res.rows[0]);
       }
+      return null;
     }
 
     const found = this.store.users.find((u) => u.id === id);
@@ -192,32 +183,13 @@ class DatabaseService {
 
   async findUserByStudentOrEmpId(studentOrEmpId: string): Promise<User | null> {
     const trimmed = studentOrEmpId.trim();
-    if (this.isPostgresConnected && this.pool) {
-      try {
-        const res = await this.pool.query('SELECT * FROM users WHERE LOWER(student_or_emp_id) = LOWER($1)', [trimmed]);
-        if (res.rows.length) {
-          const row = res.rows[0];
-          return {
-            id: row.id,
-            fullName: row.full_name,
-            email: row.email,
-            passwordHash: row.password_hash,
-            studentOrEmpId: row.student_or_emp_id,
-            role: row.role,
-            departmentId: row.department_id,
-            course: row.course,
-            yearOfStudy: row.year_of_study,
-            phone: row.phone,
-            avatarUrl: row.avatar_url,
-            status: row.status,
-            createdAt: row.created_at,
-            updatedAt: row.updated_at,
-          };
-        }
-        return null;
-      } catch (err) {
-        console.error('Postgres error in findUserByStudentOrEmpId:', err);
+    const pool = this.getPool();
+    if (pool) {
+      const res = await pool.query('SELECT * FROM users WHERE LOWER(student_or_emp_id) = LOWER($1)', [trimmed]);
+      if (res.rows.length) {
+        return this.mapUserRow(res.rows[0]);
       }
+      return null;
     }
 
     const found = this.store.users.find((u) => u.studentOrEmpId.toLowerCase() === trimmed.toLowerCase());
@@ -225,31 +197,29 @@ class DatabaseService {
   }
 
   async createUser(user: User): Promise<User> {
-    if (this.isPostgresConnected && this.pool) {
-      try {
-        await this.pool.query(
-          `INSERT INTO users (id, full_name, email, password_hash, student_or_emp_id, role, department_id, course, year_of_study, phone, avatar_url, status, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
-          [
-            user.id,
-            user.fullName,
-            user.email,
-            user.passwordHash,
-            user.studentOrEmpId,
-            user.role,
-            user.departmentId || null,
-            user.course || null,
-            user.yearOfStudy || null,
-            user.phone || null,
-            user.avatarUrl || null,
-            user.status,
-            user.createdAt,
-            user.updatedAt,
-          ]
-        );
-      } catch (err) {
-        console.error('Postgres error in createUser:', err);
-      }
+    const pool = this.getPool();
+    if (pool) {
+      await pool.query(
+        `INSERT INTO users (id, full_name, email, password_hash, student_or_emp_id, role, department_id, course, year_of_study, phone, avatar_url, status, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
+        [
+          user.id,
+          user.fullName,
+          user.email,
+          user.passwordHash,
+          user.studentOrEmpId,
+          user.role,
+          user.departmentId || null,
+          user.course || null,
+          user.yearOfStudy || null,
+          user.phone || null,
+          user.avatarUrl || null,
+          user.status,
+          user.createdAt,
+          user.updatedAt,
+        ]
+      );
+      return user;
     }
 
     this.store.users.push(user);
@@ -267,26 +237,24 @@ class DatabaseService {
       updatedAt: new Date().toISOString(),
     };
 
-    if (this.isPostgresConnected && this.pool) {
-      try {
-        await this.pool.query(
-          `UPDATE users SET full_name = $1, email = $2, role = $3, department_id = $4, course = $5, year_of_study = $6, phone = $7, status = $8, updated_at = $9 WHERE id = $10`,
-          [
-            updated.fullName,
-            updated.email,
-            updated.role,
-            updated.departmentId || null,
-            updated.course || null,
-            updated.yearOfStudy || null,
-            updated.phone || null,
-            updated.status,
-            updated.updatedAt,
-            id,
-          ]
-        );
-      } catch (err) {
-        console.error('Postgres error in updateUser:', err);
-      }
+    const pool = this.getPool();
+    if (pool) {
+      await pool.query(
+        `UPDATE users SET full_name = $1, email = $2, role = $3, department_id = $4, course = $5, year_of_study = $6, phone = $7, status = $8, updated_at = $9 WHERE id = $10`,
+        [
+          updated.fullName,
+          updated.email,
+          updated.role,
+          updated.departmentId || null,
+          updated.course || null,
+          updated.yearOfStudy || null,
+          updated.phone || null,
+          updated.status,
+          updated.updatedAt,
+          id,
+        ]
+      );
+      return updated;
     }
 
     const idx = this.store.users.findIndex((u) => u.id === id);
@@ -298,6 +266,31 @@ class DatabaseService {
   }
 
   async listUsers(role?: string, departmentId?: string, search?: string): Promise<SafeUser[]> {
+    const pool = this.getPool();
+    if (pool) {
+      let query = 'SELECT * FROM users WHERE 1=1';
+      const params: any[] = [];
+      let pIdx = 1;
+
+      if (role) {
+        query += ` AND role = $${pIdx++}`;
+        params.push(role);
+      }
+      if (departmentId) {
+        query += ` AND department_id = $${pIdx++}`;
+        params.push(departmentId);
+      }
+      if (search) {
+        query += ` AND (LOWER(full_name) LIKE $${pIdx} OR LOWER(email) LIKE $${pIdx} OR LOWER(student_or_emp_id) LIKE $${pIdx})`;
+        params.push(`%${search.toLowerCase()}%`);
+        pIdx++;
+      }
+      query += ' ORDER BY created_at DESC';
+
+      const res = await pool.query(query, params);
+      return res.rows.map((r) => this.toSafeUser(this.mapUserRow(r)));
+    }
+
     let result = this.store.users.map((u) => this.toSafeUser(u));
 
     if (role) {
@@ -321,15 +314,74 @@ class DatabaseService {
 
   // ================= DEPARTMENTS =================
   async listDepartments(): Promise<Department[]> {
+    const pool = this.getPool();
+    if (pool) {
+      const res = await pool.query('SELECT * FROM departments ORDER BY name ASC');
+      return res.rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        code: row.code,
+        description: row.description,
+        headUserId: row.head_user_id,
+        contactEmail: row.contact_email,
+        contactPhone: row.contact_phone,
+        officeLocation: row.office_location,
+        status: row.status,
+        createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+        updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString(),
+      }));
+    }
     return [...this.store.departments].sort((a, b) => a.name.localeCompare(b.name));
   }
 
   async findDepartmentById(id: string): Promise<Department | null> {
+    const pool = this.getPool();
+    if (pool) {
+      const res = await pool.query('SELECT * FROM departments WHERE id = $1', [id]);
+      if (res.rows.length) {
+        const row = res.rows[0];
+        return {
+          id: row.id,
+          name: row.name,
+          code: row.code,
+          description: row.description,
+          headUserId: row.head_user_id,
+          contactEmail: row.contact_email,
+          contactPhone: row.contact_phone,
+          officeLocation: row.office_location,
+          status: row.status,
+          createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+          updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString(),
+        };
+      }
+      return null;
+    }
     const found = this.store.departments.find((d) => d.id === id);
     return found ? { ...found } : null;
   }
 
   async createDepartment(department: Department): Promise<Department> {
+    const pool = this.getPool();
+    if (pool) {
+      await pool.query(
+        `INSERT INTO departments (id, name, code, description, head_user_id, contact_email, contact_phone, office_location, status, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        [
+          department.id,
+          department.name,
+          department.code,
+          department.description || null,
+          department.headUserId || null,
+          department.contactEmail || null,
+          department.contactPhone || null,
+          department.officeLocation || null,
+          department.status || 'ACTIVE',
+          department.createdAt,
+          department.updatedAt,
+        ]
+      );
+      return department;
+    }
     this.store.departments.push(department);
     this.saveStore();
     return department;
@@ -345,6 +397,26 @@ class DatabaseService {
       updatedAt: new Date().toISOString(),
     };
 
+    const pool = this.getPool();
+    if (pool) {
+      await pool.query(
+        `UPDATE departments SET name = $1, code = $2, description = $3, head_user_id = $4, contact_email = $5, contact_phone = $6, office_location = $7, status = $8, updated_at = $9 WHERE id = $10`,
+        [
+          updated.name,
+          updated.code,
+          updated.description || null,
+          updated.headUserId || null,
+          updated.contactEmail || null,
+          updated.contactPhone || null,
+          updated.officeLocation || null,
+          updated.status,
+          updated.updatedAt,
+          id,
+        ]
+      );
+      return updated;
+    }
+
     const idx = this.store.departments.findIndex((d) => d.id === id);
     if (idx !== -1) {
       this.store.departments[idx] = updated;
@@ -354,6 +426,17 @@ class DatabaseService {
   }
 
   async deleteDepartment(id: string): Promise<boolean> {
+    const pool = this.getPool();
+    if (pool) {
+      const chk = await pool.query('SELECT COUNT(*) FROM complaints WHERE department_id = $1', [id]);
+      const count = parseInt(chk.rows[0].count, 10);
+      if (count > 0) {
+        throw new Error(`Cannot delete department with ${count} active complaints. Deactivate it instead.`);
+      }
+      const res = await pool.query('DELETE FROM departments WHERE id = $1', [id]);
+      return (res.rowCount || 0) > 0;
+    }
+
     const count = this.store.complaints.filter((c) => c.departmentId === id).length;
     if (count > 0) {
       throw new Error(`Cannot delete department with ${count} active complaints. Deactivate it instead.`);
@@ -366,15 +449,65 @@ class DatabaseService {
 
   // ================= CATEGORIES =================
   async listCategories(): Promise<ComplaintCategory[]> {
+    const pool = this.getPool();
+    if (pool) {
+      const res = await pool.query('SELECT * FROM complaint_categories ORDER BY name ASC');
+      return res.rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        defaultDepartmentId: row.default_department_id,
+        defaultPriority: row.default_priority,
+        status: row.status,
+        createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+        updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString(),
+      }));
+    }
     return [...this.store.categories].sort((a, b) => a.name.localeCompare(b.name));
   }
 
   async findCategoryById(id: string): Promise<ComplaintCategory | null> {
+    const pool = this.getPool();
+    if (pool) {
+      const res = await pool.query('SELECT * FROM complaint_categories WHERE id = $1', [id]);
+      if (res.rows.length) {
+        const row = res.rows[0];
+        return {
+          id: row.id,
+          name: row.name,
+          description: row.description,
+          defaultDepartmentId: row.default_department_id,
+          defaultPriority: row.default_priority,
+          status: row.status,
+          createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+          updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString(),
+        };
+      }
+      return null;
+    }
     const found = this.store.categories.find((c) => c.id === id);
     return found ? { ...found } : null;
   }
 
   async createCategory(cat: ComplaintCategory): Promise<ComplaintCategory> {
+    const pool = this.getPool();
+    if (pool) {
+      await pool.query(
+        `INSERT INTO complaint_categories (id, name, description, default_department_id, default_priority, status, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          cat.id,
+          cat.name,
+          cat.description || null,
+          cat.defaultDepartmentId || null,
+          cat.defaultPriority || 'MEDIUM',
+          cat.status || 'ACTIVE',
+          cat.createdAt,
+          cat.updatedAt,
+        ]
+      );
+      return cat;
+    }
     this.store.categories.push(cat);
     this.saveStore();
     return cat;
@@ -390,6 +523,23 @@ class DatabaseService {
       updatedAt: new Date().toISOString(),
     };
 
+    const pool = this.getPool();
+    if (pool) {
+      await pool.query(
+        `UPDATE complaint_categories SET name = $1, description = $2, default_department_id = $3, default_priority = $4, status = $5, updated_at = $6 WHERE id = $7`,
+        [
+          updated.name,
+          updated.description || null,
+          updated.defaultDepartmentId || null,
+          updated.defaultPriority,
+          updated.status,
+          updated.updatedAt,
+          id,
+        ]
+      );
+      return updated;
+    }
+
     const idx = this.store.categories.findIndex((c) => c.id === id);
     if (idx !== -1) {
       this.store.categories[idx] = updated;
@@ -399,6 +549,17 @@ class DatabaseService {
   }
 
   async deleteCategory(id: string): Promise<boolean> {
+    const pool = this.getPool();
+    if (pool) {
+      const chk = await pool.query('SELECT COUNT(*) FROM complaints WHERE category_id = $1', [id]);
+      const count = parseInt(chk.rows[0].count, 10);
+      if (count > 0) {
+        throw new Error(`Cannot delete category with ${count} associated complaints. Deactivate it instead.`);
+      }
+      const res = await pool.query('DELETE FROM complaint_categories WHERE id = $1', [id]);
+      return (res.rowCount || 0) > 0;
+    }
+
     const count = this.store.complaints.filter((c) => c.categoryId === id).length;
     if (count > 0) {
       throw new Error(`Cannot delete category with ${count} associated complaints. Deactivate it instead.`);
@@ -410,6 +571,51 @@ class DatabaseService {
   }
 
   // ================= COMPLAINTS =================
+  private mapComplaintRow(row: any): Complaint {
+    return {
+      id: row.id,
+      referenceNumber: row.reference_number,
+      studentId: row.student_id,
+      title: row.title,
+      description: row.description,
+      categoryId: row.category_id,
+      departmentId: row.department_id,
+      location: row.location,
+      priority: row.priority,
+      incidentDate: row.incident_date ? new Date(row.incident_date).toISOString().split('T')[0] : null,
+      status: row.status,
+      assignedToUserId: row.assigned_to_user_id,
+      expectedResolutionDate: row.expected_resolution_date ? new Date(row.expected_resolution_date).toISOString() : null,
+      resolvedAt: row.resolved_at ? new Date(row.resolved_at).toISOString() : null,
+      closedAt: row.closed_at ? new Date(row.closed_at).toISOString() : null,
+      isReopened: Boolean(row.is_reopened),
+      reopenCount: Number(row.reopen_count || 0),
+      createdAt: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
+      updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : new Date().toISOString(),
+    };
+  }
+
+  private async populateComplaintAsync(complaint: Complaint): Promise<Complaint> {
+    const studentUser = await this.findUserById(complaint.studentId);
+    const assignedUser = complaint.assignedToUserId
+      ? await this.findUserById(complaint.assignedToUserId)
+      : null;
+    const category = await this.findCategoryById(complaint.categoryId);
+    const department = await this.findDepartmentById(complaint.departmentId);
+    const resolution = this.store.resolutions.find((r) => r.complaintId === complaint.id);
+    const feedback = this.store.feedback.find((f) => f.complaintId === complaint.id);
+
+    return {
+      ...complaint,
+      student: studentUser ? this.toSafeUser(studentUser) : undefined,
+      assignedTo: assignedUser ? this.toSafeUser(assignedUser) : undefined,
+      category: category || undefined,
+      department: department || undefined,
+      resolution,
+      feedback,
+    };
+  }
+
   private populateComplaint(complaint: Complaint): Complaint {
     const studentUser = this.store.users.find((u) => u.id === complaint.studentId);
     const assignedUser = complaint.assignedToUserId
@@ -443,6 +649,69 @@ class DatabaseService {
     startDate?: string;
     endDate?: string;
   }): Promise<Complaint[]> {
+    const pool = this.getPool();
+    if (pool) {
+      let query = 'SELECT * FROM complaints WHERE 1=1';
+      const params: any[] = [];
+      let pIdx = 1;
+
+      if (filters.studentId) {
+        query += ` AND student_id = $${pIdx++}`;
+        params.push(filters.studentId);
+      }
+      if (filters.departmentId) {
+        query += ` AND department_id = $${pIdx++}`;
+        params.push(filters.departmentId);
+      }
+      if (filters.assignedToUserId) {
+        query += ` AND assigned_to_user_id = $${pIdx++}`;
+        params.push(filters.assignedToUserId);
+      }
+      if (filters.status) {
+        query += ` AND status = $${pIdx++}`;
+        params.push(filters.status);
+      }
+      if (filters.priority) {
+        query += ` AND priority = $${pIdx++}`;
+        params.push(filters.priority);
+      }
+      if (filters.categoryId) {
+        query += ` AND category_id = $${pIdx++}`;
+        params.push(filters.categoryId);
+      }
+      if (filters.search) {
+        query += ` AND (LOWER(title) LIKE $${pIdx} OR LOWER(reference_number) LIKE $${pIdx} OR LOWER(description) LIKE $${pIdx} OR LOWER(location) LIKE $${pIdx})`;
+        params.push(`%${filters.search.toLowerCase()}%`);
+        pIdx++;
+      }
+      if (filters.startDate) {
+        query += ` AND created_at >= $${pIdx++}`;
+        params.push(new Date(filters.startDate).toISOString());
+      }
+      if (filters.endDate) {
+        query += ` AND created_at <= $${pIdx++}`;
+        params.push(new Date(filters.endDate).toISOString());
+      }
+      if (filters.dateRange && filters.dateRange !== 'ALL') {
+        const now = Date.now();
+        let limitDays = 30;
+        if (filters.dateRange === 'MONTH') limitDays = 30;
+        else if (filters.dateRange === '3_MONTHS') limitDays = 90;
+        else if (filters.dateRange === '6_MONTHS') limitDays = 180;
+        else if (filters.dateRange === 'YEAR') limitDays = 365;
+
+        const cutoff = new Date(now - limitDays * 86400000).toISOString();
+        query += ` AND created_at >= $${pIdx++}`;
+        params.push(cutoff);
+      }
+
+      query += ' ORDER BY created_at DESC';
+
+      const res = await pool.query(query, params);
+      const complaints = res.rows.map((r) => this.mapComplaintRow(r));
+      return Promise.all(complaints.map((c) => this.populateComplaintAsync(c)));
+    }
+
     let result = [...this.store.complaints];
 
     if (filters.studentId) {
@@ -501,12 +770,76 @@ class DatabaseService {
   }
 
   async findComplaintById(id: string): Promise<Complaint | null> {
+    const pool = this.getPool();
+    if (pool) {
+      const res = await pool.query('SELECT * FROM complaints WHERE id = $1 OR reference_number = $1', [id]);
+      if (res.rows.length) {
+        return this.populateComplaintAsync(this.mapComplaintRow(res.rows[0]));
+      }
+      return null;
+    }
+
     const found = this.store.complaints.find((c) => c.id === id || c.referenceNumber === id);
     if (!found) return null;
     return this.populateComplaint(found);
   }
 
   async createComplaint(complaint: Complaint): Promise<Complaint> {
+    const pool = this.getPool();
+    if (pool) {
+      await pool.query(
+        `INSERT INTO complaints (id, reference_number, student_id, title, description, category_id, department_id, location, priority, incident_date, status, assigned_to_user_id, expected_resolution_date, resolved_at, closed_at, is_reopened, reopen_count, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)`,
+        [
+          complaint.id,
+          complaint.referenceNumber,
+          complaint.studentId,
+          complaint.title,
+          complaint.description,
+          complaint.categoryId,
+          complaint.departmentId,
+          complaint.location || null,
+          complaint.priority,
+          complaint.incidentDate || null,
+          complaint.status,
+          complaint.assignedToUserId || null,
+          complaint.expectedResolutionDate || null,
+          complaint.resolvedAt || null,
+          complaint.closedAt || null,
+          complaint.isReopened || false,
+          complaint.reopenCount || 0,
+          complaint.createdAt,
+          complaint.updatedAt,
+        ]
+      );
+
+      // Record initial history
+      await this.addComplaintHistory({
+        id: `hist-${Date.now()}`,
+        complaintId: complaint.id,
+        action: 'SUBMITTED',
+        previousStatus: null,
+        newStatus: 'SUBMITTED',
+        performedByUserId: complaint.studentId,
+        notes: 'Complaint submitted by student.',
+        createdAt: complaint.createdAt,
+      });
+
+      // Notify admins and department
+      await this.createNotification({
+        id: `notif-${Date.now()}`,
+        userId: 'usr-admin',
+        title: 'New Complaint Submitted',
+        message: `${complaint.referenceNumber}: ${complaint.title}`,
+        type: 'COMPLAINT_SUBMITTED',
+        relatedComplaintId: complaint.id,
+        isRead: false,
+        createdAt: complaint.createdAt,
+      });
+
+      return this.populateComplaintAsync(complaint);
+    }
+
     this.store.complaints.unshift(complaint);
 
     // Record initial history
@@ -546,6 +879,40 @@ class DatabaseService {
       ...updates,
       updatedAt: new Date().toISOString(),
     };
+
+    const pool = this.getPool();
+    if (pool) {
+      await pool.query(
+        `UPDATE complaints SET
+          title = COALESCE($1, title),
+          description = COALESCE($2, description),
+          status = COALESCE($3, status),
+          priority = COALESCE($4, priority),
+          assigned_to_user_id = $5,
+          expected_resolution_date = $6,
+          resolved_at = $7,
+          closed_at = $8,
+          is_reopened = COALESCE($9, is_reopened),
+          reopen_count = COALESCE($10, reopen_count),
+          updated_at = $11
+        WHERE id = $12`,
+        [
+          updated.title,
+          updated.description,
+          updated.status,
+          updated.priority,
+          updated.assignedToUserId || null,
+          updated.expectedResolutionDate || null,
+          updated.resolvedAt || null,
+          updated.closedAt || null,
+          updated.isReopened,
+          updated.reopenCount,
+          updated.updatedAt,
+          id,
+        ]
+      );
+      return this.populateComplaintAsync(updated);
+    }
 
     const idx = this.store.complaints.findIndex((c) => c.id === id);
     if (idx !== -1) {
@@ -750,12 +1117,39 @@ class DatabaseService {
 
   // ================= NOTIFICATIONS =================
   async listNotifications(userId: string): Promise<Notification[]> {
+    const pool = this.getPool();
+    if (pool) {
+      const res = await pool.query(
+        'SELECT * FROM notifications WHERE user_id = $1 ORDER BY created_at DESC',
+        [userId]
+      );
+      return res.rows.map((r) => ({
+        id: r.id,
+        userId: r.user_id,
+        title: r.title,
+        message: r.message,
+        type: r.type,
+        relatedComplaintId: r.related_complaint_id,
+        isRead: r.is_read,
+        createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+      }));
+    }
+
     return this.store.notifications
       .filter((n) => n.userId === userId)
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }
 
   async markNotificationRead(id: string, userId: string): Promise<boolean> {
+    const pool = this.getPool();
+    if (pool) {
+      const res = await pool.query(
+        'UPDATE notifications SET is_read = true WHERE id = $1 AND user_id = $2',
+        [id, userId]
+      );
+      return (res.rowCount || 0) > 0;
+    }
+
     const notif = this.store.notifications.find((n) => n.id === id && n.userId === userId);
     if (notif) {
       notif.isRead = true;
@@ -766,6 +1160,15 @@ class DatabaseService {
   }
 
   async markAllNotificationsRead(userId: string): Promise<number> {
+    const pool = this.getPool();
+    if (pool) {
+      const res = await pool.query(
+        'UPDATE notifications SET is_read = true WHERE user_id = $1 AND is_read = false',
+        [userId]
+      );
+      return res.rowCount || 0;
+    }
+
     let count = 0;
     for (const notif of this.store.notifications) {
       if (notif.userId === userId && !notif.isRead) {
@@ -778,6 +1181,25 @@ class DatabaseService {
   }
 
   async createNotification(notification: Notification): Promise<Notification> {
+    const pool = this.getPool();
+    if (pool) {
+      await pool.query(
+        `INSERT INTO notifications (id, user_id, title, message, type, related_complaint_id, is_read, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          notification.id,
+          notification.userId,
+          notification.title,
+          notification.message,
+          notification.type,
+          notification.relatedComplaintId || null,
+          notification.isRead || false,
+          notification.createdAt,
+        ]
+      );
+      return notification;
+    }
+
     this.store.notifications.unshift(notification);
     this.saveStore();
     return notification;
@@ -785,12 +1207,46 @@ class DatabaseService {
 
   // ================= AUDIT LOGS =================
   async createAuditLog(log: AuditLog): Promise<AuditLog> {
+    const pool = this.getPool();
+    if (pool) {
+      await pool.query(
+        `INSERT INTO audit_logs (id, user_id, action, target_entity, target_id, details, ip_address, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          log.id,
+          log.userId || null,
+          log.action,
+          log.targetEntity,
+          log.targetId || null,
+          JSON.stringify(log.details || {}),
+          log.ipAddress || null,
+          log.createdAt,
+        ]
+      );
+      return log;
+    }
+
     this.store.auditLogs.unshift(log);
     this.saveStore();
     return log;
   }
 
   async listAuditLogs(limit = 100): Promise<AuditLog[]> {
+    const pool = this.getPool();
+    if (pool) {
+      const res = await pool.query('SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT $1', [limit]);
+      return res.rows.map((r) => ({
+        id: r.id,
+        userId: r.user_id,
+        action: r.action,
+        targetEntity: r.target_entity,
+        targetId: r.target_id,
+        details: r.details,
+        ipAddress: r.ip_address,
+        createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+      }));
+    }
+
     return this.store.auditLogs.slice(0, limit).map((log) => {
       const user = log.userId ? this.store.users.find((u) => u.id === log.userId) : null;
       return {

@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { db } from '../db/db';
@@ -7,7 +8,8 @@ export interface AuthenticatedRequest extends Request {
   user?: SafeUser;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'campus_resolve_jwt_secret_key_2026_super_secure_college_portal';
+const getJwtSecret = (): string =>
+  process.env.JWT_SECRET || 'campus_resolve_jwt_secret_key_2026_super_secure_college_portal';
 
 export const authenticateToken = async (
   req: AuthenticatedRequest,
@@ -23,7 +25,7 @@ export const authenticateToken = async (
       return;
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; email: string; role: UserRole };
+    const decoded = jwt.verify(token, getJwtSecret()) as { id: string; email: string; role: UserRole };
     const user = await db.findUserById(decoded.id);
 
     if (!user) {
@@ -70,7 +72,7 @@ export const generateToken = (user: SafeUser): string => {
       role: user.role,
       name: user.fullName,
     },
-    JWT_SECRET,
+    getJwtSecret(),
     { expiresIn: '7d' }
   );
 };

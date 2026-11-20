@@ -9,20 +9,70 @@ export const register = async (req: AuthenticatedRequest, res: Response): Promis
     const { fullName, email, password, studentOrEmpId, departmentId, course, yearOfStudy, phone, role } = req.body;
 
     if (!fullName || !email || !password || !studentOrEmpId) {
-      res.status(400).json({ success: false, message: 'Please provide full name, college email, password, and Student/Roll ID.' });
+      res.status(400).json({
+        success: false,
+        message: 'Please provide full name, college email, password, and Student/Roll ID.',
+      });
       return;
     }
 
-    const normalizedEmail = email.toLowerCase().trim();
-    const existingEmail = await db.findUserByEmail(normalizedEmail);
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(normalizedEmail)) {
+      res.status(400).json({
+        success: false,
+        message: 'Please provide a valid college email address.',
+      });
+      return;
+    }
+
+    if (String(password).length < 6) {
+      res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long.',
+      });
+      return;
+    }
+
+    // Check duplicate email
+    let existingEmail: User | null = null;
+    try {
+      existingEmail = await db.findUserByEmail(normalizedEmail);
+    } catch (dbErr: any) {
+      console.error('Database error in findUserByEmail:', dbErr);
+      res.status(503).json({
+        success: false,
+        message: 'Database service is temporarily unavailable. Please try again in a few moments.',
+      });
+      return;
+    }
+
     if (existingEmail) {
-      res.status(409).json({ success: false, message: 'An account with this college email already exists.' });
+      res.status(409).json({
+        success: false,
+        message: 'An account with this college email already exists.',
+      });
       return;
     }
 
-    const existingStudentId = await db.findUserByStudentOrEmpId(studentOrEmpId.trim());
+    // Check duplicate student / employee ID
+    let existingStudentId: User | null = null;
+    try {
+      existingStudentId = await db.findUserByStudentOrEmpId(String(studentOrEmpId).trim());
+    } catch (dbErr: any) {
+      console.error('Database error in findUserByStudentOrEmpId:', dbErr);
+      res.status(503).json({
+        success: false,
+        message: 'Database service is temporarily unavailable. Please try again in a few moments.',
+      });
+      return;
+    }
+
     if (existingStudentId) {
-      res.status(409).json({ success: false, message: 'An account with this Student ID / Roll No already exists.' });
+      res.status(409).json({
+        success: false,
+        message: 'An account with this Student ID / Roll No already exists.',
+      });
       return;
     }
 
@@ -32,10 +82,10 @@ export const register = async (req: AuthenticatedRequest, res: Response): Promis
 
     const newUser: User = {
       id,
-      fullName: fullName.trim(),
+      fullName: String(fullName).trim(),
       email: normalizedEmail,
       passwordHash,
-      studentOrEmpId: studentOrEmpId.trim(),
+      studentOrEmpId: String(studentOrEmpId).trim(),
       role: role || 'STUDENT',
       departmentId: departmentId || null,
       course: course || null,
@@ -46,20 +96,34 @@ export const register = async (req: AuthenticatedRequest, res: Response): Promis
       updatedAt: new Date().toISOString(),
     };
 
-    await db.createUser(newUser);
+    try {
+      await db.createUser(newUser);
+    } catch (createErr: any) {
+      console.error('Database error in createUser:', createErr);
+      res.status(503).json({
+        success: false,
+        message: 'Database service is temporarily unavailable. Failed to persist account.',
+      });
+      return;
+    }
+
     const safeUser = db.toSafeUser(newUser);
     const token = generateToken(safeUser);
 
     // Initial welcome notification
-    await db.createNotification({
-      id: `notif-${Date.now()}`,
-      userId: id,
-      title: 'Welcome to CampusResolve',
-      message: 'Your student account has been created. You can now lodge, track, and manage grievances.',
-      type: 'ACCOUNT_CREATED',
-      isRead: false,
-      createdAt: new Date().toISOString(),
-    });
+    try {
+      await db.createNotification({
+        id: `notif-${Date.now()}`,
+        userId: id,
+        title: 'Welcome to CampusResolve',
+        message: 'Your student account has been created. You can now lodge, track, and manage grievances.',
+        type: 'ACCOUNT_CREATED',
+        isRead: false,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (notifErr) {
+      console.warn('Initial notification could not be created:', notifErr);
+    }
 
     res.status(201).json({
       success: true,
@@ -70,7 +134,8 @@ export const register = async (req: AuthenticatedRequest, res: Response): Promis
       },
     });
   } catch (err: any) {
-    res.status(500).json({ success: false, message: 'Failed to register account.', error: err.message });
+    const errorMsg = typeof err?.message === 'string' ? err.message : 'Failed to register account.';
+    res.status(500).json({ success: false, message: errorMsg });
   }
 };
 
@@ -83,7 +148,19 @@ export const login = async (req: AuthenticatedRequest, res: Response): Promise<v
       return;
     }
 
-    const user = await db.findUserByEmail(email);
+    const normalizedEmail = String(email).toLowerCase().trim();
+    let user: User | null = null;
+    try {
+      user = await db.findUserByEmail(normalizedEmail);
+    } catch (dbErr: any) {
+      console.error('Database error in login:', dbErr);
+      res.status(503).json({
+        success: false,
+        message: 'Database service is temporarily unavailable. Please try again shortly.',
+      });
+      return;
+    }
+
     if (!user) {
       res.status(401).json({ success: false, message: 'Invalid credentials. User not found.' });
       return;
@@ -112,7 +189,8 @@ export const login = async (req: AuthenticatedRequest, res: Response): Promise<v
       },
     });
   } catch (err: any) {
-    res.status(500).json({ success: false, message: 'Login failed.', error: err.message });
+    const errorMsg = typeof err?.message === 'string' ? err.message : 'Login failed.';
+    res.status(500).json({ success: false, message: errorMsg });
   }
 };
 

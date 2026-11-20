@@ -1,6 +1,6 @@
+import 'dotenv/config';
 import express, { Express } from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes';
 import complaintRoutes from './routes/complaint.routes';
 import departmentRoutes from './routes/department.routes';
@@ -11,8 +11,6 @@ import reportRoutes from './routes/report.routes';
 import notificationRoutes from './routes/notification.routes';
 import settingsRoutes from './routes/settings.routes';
 import { errorHandler } from './middleware/error.middleware';
-
-dotenv.config();
 
 const app: Express = express();
 

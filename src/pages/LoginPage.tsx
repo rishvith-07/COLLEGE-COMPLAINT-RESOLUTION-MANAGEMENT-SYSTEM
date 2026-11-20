@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ShieldCheck, Mail, Lock, ArrowRight, UserCheck } from 'lucide-react';
+import { extractApiErrorMessage } from '../utils/error';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -30,7 +31,7 @@ export const LoginPage: React.FC = () => {
         setError(res.message || 'Login failed.');
       }
     } catch (err: any) {
-      setError(err.message || 'Login failed.');
+      setError(extractApiErrorMessage(err, 'Login failed. Please check your credentials.'));
     } finally {
       setLoading(false);
     }

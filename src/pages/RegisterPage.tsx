@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Department } from '../types';
 import api from '../services/api';
 import { ShieldCheck, User, Mail, Lock, BookOpen, Hash, ArrowRight } from 'lucide-react';
+import { extractApiErrorMessage } from '../utils/error';
 
 export const RegisterPage: React.FC = () => {
   const { register } = useAuth();
@@ -99,7 +100,7 @@ export const RegisterPage: React.FC = () => {
         setError(res.message || 'Registration failed.');
       }
     } catch (err: any) {
-      setError(err.message || 'Registration failed.');
+      setError(extractApiErrorMessage(err, 'Registration failed.'));
     } finally {
       setLoading(false);
     }

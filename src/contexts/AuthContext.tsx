@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
 import { SafeUser, UserRole } from '../types';
+import { extractApiErrorMessage } from '../utils/error';
 
 interface AuthContextType {
   user: SafeUser | null;
@@ -62,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       return {
         success: false,
-        message: err.response?.data?.message || 'Login failed. Please check your credentials.',
+        message: extractApiErrorMessage(err, 'Login failed. Please check your credentials.'),
       };
     }
   };
@@ -80,11 +81,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return { success: false, message: res.data.message };
     } catch (err: any) {
-      const serverMsg = err.response?.data?.message || err.response?.data?.error;
-      const statusText = err.response?.status ? ` (HTTP ${err.response.status})` : '';
       return {
         success: false,
-        message: serverMsg ? `${serverMsg}${statusText}` : (err.message || 'Registration failed.'),
+        message: extractApiErrorMessage(err, 'Registration failed. Please check your details.'),
       };
     }
   };
