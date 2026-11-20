@@ -19,14 +19,31 @@ import {
 export const SubmitComplaintPage: React.FC = () => {
   const navigate = useNavigate();
 
-  const [categories, setCategories] = useState<ComplaintCategory[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const defaultCategories: ComplaintCategory[] = [
+    { id: 'cat-wifi', name: 'Wi-Fi & Internet Connectivity', description: 'Network issues', defaultDepartmentId: 'dept-it', defaultPriority: 'HIGH', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    { id: 'cat-hostel', name: 'Hostel Maintenance & Cleanliness', description: 'Hostel issues', defaultDepartmentId: 'dept-hostel', defaultPriority: 'MEDIUM', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    { id: 'cat-lab', name: 'Lab Hardware / Software Equipment', description: 'Laboratory issues', defaultDepartmentId: 'dept-cs', defaultPriority: 'MEDIUM', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    { id: 'cat-acad', name: 'Academic Course Grievance', description: 'Academic issues', defaultDepartmentId: 'dept-acad', defaultPriority: 'HIGH', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    { id: 'cat-water', name: 'Drinking Water & Sanitation', description: 'Sanitation issues', defaultDepartmentId: 'dept-estate', defaultPriority: 'URGENT', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+  ];
+
+  const defaultDepartments: Department[] = [
+    { id: 'dept-cs', name: 'Computer Science & Engineering', code: 'CSE', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    { id: 'dept-it', name: 'IT & Campus Networking', code: 'ITNET', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    { id: 'dept-hostel', name: 'Hostel Administration', code: 'HOSTEL', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    { id: 'dept-estate', name: 'Estate & Campus Maintenance', code: 'ESTATE', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    { id: 'dept-acad', name: 'Academic Affairs & Examinations', code: 'ACAD', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    { id: 'dept-library', name: 'Central Library', code: 'LIB', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+  ];
+
+  const [categories, setCategories] = useState<ComplaintCategory[]>(defaultCategories);
+  const [departments, setDepartments] = useState<Department[]>(defaultDepartments);
   const [formData, setFormData] = useState({
     title: '',
-    categoryId: '',
-    departmentId: '',
+    categoryId: 'cat-wifi',
+    departmentId: 'dept-it',
     location: '',
-    priority: 'MEDIUM' as ComplaintPriority,
+    priority: 'HIGH' as ComplaintPriority,
     incidentDate: new Date().toISOString().split('T')[0],
     description: '',
   });

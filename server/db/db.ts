@@ -51,7 +51,7 @@ class DatabaseService {
   private storeFilePath: string;
 
   constructor() {
-    this.storeFilePath = path.resolve(process.cwd(), 'api/db/local_store.json');
+    this.storeFilePath = path.resolve(process.cwd(), 'server/db/local_store.json');
     this.store = this.loadStore();
     this.initPostgres();
   }

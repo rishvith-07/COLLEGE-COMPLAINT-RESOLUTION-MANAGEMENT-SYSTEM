@@ -9,12 +9,24 @@ export const RegisterPage: React.FC = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const [departments, setDepartments] = useState<Department[]>([]);
+  const defaultDepartments: Department[] = [
+    { id: 'dept-cs', name: 'Computer Science & Engineering', code: 'CSE', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    { id: 'dept-it', name: 'IT & Campus Networking', code: 'ITNET', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    { id: 'dept-hostel', name: 'Hostel Administration', code: 'HOSTEL', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    { id: 'dept-estate', name: 'Estate & Campus Maintenance', code: 'ESTATE', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    { id: 'dept-acad', name: 'Academic Affairs & Examinations', code: 'ACAD', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    { id: 'dept-library', name: 'Central Library', code: 'LIB', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    { id: 'dept-mech', name: 'Mechanical Engineering', code: 'MECH', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    { id: 'dept-ece', name: 'Electronics & Communication', code: 'ECE', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+    { id: 'dept-finance', name: 'Finance & Accounts Office', code: 'FIN', status: 'ACTIVE', createdAt: '', updatedAt: '' },
+  ];
+
+  const [departments, setDepartments] = useState<Department[]>(defaultDepartments);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
     studentOrEmpId: '',
-    departmentId: '',
+    departmentId: 'dept-cs',
     course: 'B.Tech Computer Science',
     yearOfStudy: '3rd Year',
     phone: '',
@@ -26,21 +38,28 @@ export const RegisterPage: React.FC = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let isMounted = true;
     const fetchDepts = async () => {
       try {
         const res = await api.get('/departments');
-        if (res.data.success) {
+        if (isMounted && res.data && res.data.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
           const list = res.data.data.filter((d: Department) => d.status === 'ACTIVE');
-          setDepartments(list);
           if (list.length > 0) {
-            setFormData((prev) => ({ ...prev, departmentId: list[0].id }));
+            setDepartments(list);
+            setFormData((prev) => ({
+              ...prev,
+              departmentId: prev.departmentId || list[0].id,
+            }));
           }
         }
       } catch (err) {
-        console.error('Failed to load departments');
+        console.warn('Using standard department catalog.');
       }
     };
     fetchDepts();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
